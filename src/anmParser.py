@@ -153,12 +153,16 @@ class Layer:
 		spritesheet_id: int
 		if layer_tree is None:
 			self.name = name
-			self.layer_id = layer_id
+			self.id = layer_id
 			self.spritesheet_id = spritesheet_id
 		else:
 			self.name = layer_tree.get('Name')
 			self.id = layer_tree.get('Id')
-			self.spritesheet_id = layer_tree.get('SpritesheetId')
+			self.spritesheet_id = int(layer_tree.get('SpritesheetId'))
+
+	def __str__(self):
+		return f'Name: {self.name}|layer_id: {self.id}|spritesheet_id:' \
+		       f'{self.spritesheet_id}'
 
 
 class AnimatedActor:
