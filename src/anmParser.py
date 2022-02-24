@@ -345,6 +345,11 @@ class AnimatedActor:
 			new_index = self.add_spritesheet(path)
 			self.get_layer_by_sprite_id(key).spritesheet_id = new_index
 		self.save_file(self.path)
+
+	def replace_spritesheet(self, spritesheet_id, path: str):
+		self.spritesheets[spritesheet_id] = path
+
+
 if __name__ == '__main__':
 	anm_path_ = '/Users/srokks/PycharmProjects/animationEditor/resources/static' \
 	            '/002_the inner eye.anm2'
