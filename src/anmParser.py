@@ -298,7 +298,9 @@ class AnimatedActor:
 		return [anim.name for anim in self.animations]
 
 	def add_spritesheet(self, path: str):
-		self.spritesheets.update({len(self.spritesheets): path})
+		index = len(self.spritesheets)
+		self.spritesheets.update({index: path})
+		return index
 
 	def add_animation(self, name):
 		self.animations.append(Animation(name=name))
@@ -326,7 +328,19 @@ class AnimatedActor:
 					if layer_anim.layer_id == layer_id:
 						layer_anim.frames.append(Frame())
 
+	def get_layer_by_sprite_id(self, sprite_id):
+		for key, layer in self.layers.items():
+			if layer.spritesheet_id == sprite_id:
+				return self.layers[key]
 
+	def remove_unused_spritesheets(self):
+		used_spritesheets = set(layer.spritesheet_id for layer in self.layers.values())
+		old_sprites = {key: self.spritesheets[key] for key in used_spritesheets}
+		self.spritesheets = {}
+		for key, path in old_sprites.items():
+			new_index = self.add_spritesheet(path)
+			self.get_layer_by_sprite_id(key).spritesheet_id = new_index
+		self.save_file(self.path)
 if __name__ == '__main__':
 	anm_path_ = '/Users/srokks/PycharmProjects/animationEditor/resources/static' \
 	            '/002_the inner eye.anm2'
