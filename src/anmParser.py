@@ -1,6 +1,7 @@
 from lxml import etree, objectify
 import dateutil.parser as parser
 from datetime import datetime as dt
+from pathlib import Path
 
 
 class Frame:
@@ -144,8 +145,9 @@ class Animation:
 
 
 class Layer:
-	def __init__(self, layer_tree: etree = None, name=None, layer_id=None,
-	             spritesheet_id=None):
+	def __init__(
+			self, layer_tree: etree = None, name=None, layer_id=None,
+			spritesheet_id=None):
 		name: str
 		layer_id: int
 		spritesheet_id: int
@@ -171,7 +173,7 @@ class AnimatedActor:
 		self.events: dict = {}
 		self.animations: list = []
 		self.default_animation: str = ""
-		self.path = anm_path
+		self.path = Path(anm_path)
 		if self.path is not None:
 			with open(self.path, 'r') as f:
 				anm_str = f.read()
@@ -210,22 +212,25 @@ class AnimatedActor:
 
 	def save_file(self, path):
 		root = etree.Element("AnimatedActor")
-		info = etree.SubElement(root, 'Info', CreatedBy=self.created_by,
-		                        CreatedOn=self.created_date.strftime(
-			                        '%d/%m/%Y %H:%M:%S'),
-		                        Version=str(self.version), Fps=str(self.fps))
+		info = etree.SubElement(
+			root, 'Info', CreatedBy=self.created_by,
+			CreatedOn=self.created_date.strftime(
+				'%d/%m/%Y %H:%M:%S'),
+			Version=str(self.version), Fps=str(self.fps))
 		# _____
 		content = etree.SubElement(root, 'Content')
 		# _____ Sheets
 		spritesheets = etree.SubElement(content, 'Spritesheets')
 		for sheet_id, sheet_path in self.spritesheets.items():
-			etree.SubElement(spritesheets, 'Spritesheet', Id=f'{sheet_id}',
-			                 Path=sheet_path)
+			etree.SubElement(
+				spritesheets, 'Spritesheet', Id=f'{sheet_id}',
+				Path=sheet_path)
 		# _____ Layers
 		layers = etree.SubElement(content, 'Layers')
 		for layer in self.layers.values():
-			etree.SubElement(layers, 'Layer', Id=str(layer.layer_id), Name=layer.name,
-			                 SpritesheetId=str(layer.spritesheet_id))
+			etree.SubElement(
+				layers, 'Layer', Id=str(layer.id), Name=layer.name,
+				SpritesheetId=str(layer.spritesheet_id))
 		# _____ NULLS
 		nulls = etree.SubElement(content, 'Nulls')
 		# TODO: nulls save
@@ -233,51 +238,56 @@ class AnimatedActor:
 		events = etree.SubElement(content, 'Events')
 		# TODO: events save
 		# _____
-		animations = etree.SubElement(root, 'Animations',
-		                              DefaultAnimation=self.default_animation)
+		animations = etree.SubElement(
+			root, 'Animations',
+			DefaultAnimation=self.default_animation)
 		for animation in self.animations:
-			anim = etree.SubElement(animations, 'Animation', Name=animation.name,
-			                        FrameNum=f'{animation.frame_num}',
-			                        Loop=f'{animation.loop}')
+			anim = etree.SubElement(
+				animations, 'Animation', Name=animation.name,
+				FrameNum=f'{animation.frame_num}',
+				Loop=f'{animation.loop}')
 			root_anim = etree.SubElement(anim, 'RootAnimation')
 			for frame in animation.root_animation:
-				etree.SubElement(root_anim, 'Frame', XPosition=f'{frame.pos_x}',
-				                 YPosition=f'{frame.pos_y}',
-				                 Delay=f'{frame.delay}', Visible=f'{frame.visible}',
-				                 XScale=f'{frame.scale_x}',
-				                 YScale=f'{frame.scale_y}', RedTint=f'{frame.tint_red}',
-				                 GreenTint=f'{frame.tint_green}',
-				                 BlueTint=f'{frame.tint_blue}',
-				                 AlphaTint=f'{frame.tint_alpha}',
-				                 RedOffset=f'{frame.offset_red}',
-				                 GreenOffset=f'{frame.offset_green}',
-				                 BlueOffset=f'{frame.offset_blue}',
-				                 Rotation=f'{frame.rotation}',
-				                 Interpolated=f'{frame.interpolated}')
+				etree.SubElement(
+					root_anim, 'Frame', XPosition=f'{frame.pos_x}',
+					YPosition=f'{frame.pos_y}',
+					Delay=f'{frame.delay}', Visible=f'{frame.visible}',
+					XScale=f'{frame.scale_x}',
+					YScale=f'{frame.scale_y}', RedTint=f'{frame.tint_red}',
+					GreenTint=f'{frame.tint_green}',
+					BlueTint=f'{frame.tint_blue}',
+					AlphaTint=f'{frame.tint_alpha}',
+					RedOffset=f'{frame.offset_red}',
+					GreenOffset=f'{frame.offset_green}',
+					BlueOffset=f'{frame.offset_blue}',
+					Rotation=f'{frame.rotation}',
+					Interpolated=f'{frame.interpolated}')
 			layers_anim = etree.SubElement(anim, 'LayerAnimations')
 			for layer_anim in animation.layer_animations:
-				layer = etree.SubElement(layers_anim, 'LayerAnimation',
-				                         LayerId=f'{layer_anim.layer_id}',
-				                         Visible=f'{layer_anim.visible}')
+				layer = etree.SubElement(
+					layers_anim, 'LayerAnimation',
+					LayerId=f'{layer_anim.layer_id}',
+					Visible=f'{layer_anim.visible}')
 				for frame in layer_anim.frames:
-					etree.SubElement(layer, 'Frame', XPosition=f'{frame.pos_x}',
-					                 YPosition=f'{frame.pos_y}',
-					                 Delay=f'{frame.delay}', Visible=f'{frame.visible}',
-					                 XScale=f'{frame.scale_x}',
-					                 YScale=f'{frame.scale_y}',
-					                 RedTint=f'{frame.tint_red}',
-					                 GreenTint=f'{frame.tint_green}',
-					                 BlueTint=f'{frame.tint_blue}',
-					                 AlphaTint=f'{frame.tint_alpha}',
-					                 RedOffset=f'{frame.offset_red}',
-					                 GreenOffset=f'{frame.offset_green}',
-					                 BlueOffset=f'{frame.offset_blue}',
-					                 Rotation=f'{frame.rotation}',
-					                 Interpolated=f'{frame.interpolated}',
-					                 XPivot=f'{frame.pivot_x}',
-					                 YPivot=f'{frame.pivot_y}', Width=f'{frame.width}',
-					                 Height=f'{frame.height}',
-					                 XCrop=f'{frame.crop_x}', YCrop=f'{frame.crop_y}')
+					etree.SubElement(
+						layer, 'Frame', XPosition=f'{frame.pos_x}',
+						YPosition=f'{frame.pos_y}',
+						Delay=f'{frame.delay}', Visible=f'{frame.visible}',
+						XScale=f'{frame.scale_x}',
+						YScale=f'{frame.scale_y}',
+						RedTint=f'{frame.tint_red}',
+						GreenTint=f'{frame.tint_green}',
+						BlueTint=f'{frame.tint_blue}',
+						AlphaTint=f'{frame.tint_alpha}',
+						RedOffset=f'{frame.offset_red}',
+						GreenOffset=f'{frame.offset_green}',
+						BlueOffset=f'{frame.offset_blue}',
+						Rotation=f'{frame.rotation}',
+						Interpolated=f'{frame.interpolated}',
+						XPivot=f'{frame.pivot_x}',
+						YPivot=f'{frame.pivot_y}', Width=f'{frame.width}',
+						Height=f'{frame.height}',
+						XCrop=f'{frame.crop_x}', YCrop=f'{frame.crop_y}')
 		# _____
 		with open(path, 'wb') as f:
 			etree.indent(root, space='\t')  # sets indents to tabs
@@ -287,21 +297,24 @@ class AnimatedActor:
 	def get_animation_list(self):
 		return [anim.name for anim in self.animations]
 
-	def add_spritesheet(self, path):
+	def add_spritesheet(self, path: str):
 		self.spritesheets.update({len(self.spritesheets): path})
 
 	def add_animation(self, name):
 		self.animations.append(Animation(name=name))
 		for layer in self.layers.values():
-			self.animations[-1].layer_animations.append(LayerAnimation(
-				layer_id=layer.layer_id))
+			self.animations[-1].layer_animations.append(
+				LayerAnimation(
+					layer_id=layer.layer_id))
 		if len(self.animations) == 1:
 			self.default_animation = name
 
 	def add_layer(self, name: str, spritesheet_id: int):
 		layer_id = len(self.layers)
-		self.layers.update({layer_id: Layer(name=name, layer_id=layer_id,
-		                                    spritesheet_id=spritesheet_id)})
+		self.layers.update(
+			{layer_id: Layer(
+				name=name, layer_id=layer_id,
+				spritesheet_id=spritesheet_id)})
 		for anim in self.animations:
 			anim.layer_animations.append(LayerAnimation(layer_id=layer_id))
 
@@ -315,7 +328,8 @@ class AnimatedActor:
 
 
 if __name__ == '__main__':
-	anm_path_ = '/Users/srokks/PycharmProjects/animationEditor/resources/static/002_the inner eye.anm2'
+	anm_path_ = '/Users/srokks/PycharmProjects/animationEditor/resources/static' \
+	            '/002_the inner eye.anm2'
 	save = '/Users/srokks/PycharmProjects/animationEditor/resources/static/blank_my' \
 	       '.anm2'
 	file = AnimatedActor()
