@@ -355,7 +355,7 @@ if __name__ == '__main__':
 	            '/002_the inner eye.anm2'
 	save = '/Users/srokks/PycharmProjects/animationEditor/resources/static/blank_my' \
 	       '.anm2'
-	file = AnimatedActor()
+	file = AnimatedActor(save)
 	file.created_by = 'Srokks'
 	file.save_file(save)
 '''
