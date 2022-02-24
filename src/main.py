@@ -8,7 +8,7 @@ from anmParser import AnimatedActor
 from pathlib import Path
 
 
-class testModel(QAbstractListModel):
+class SpritesheetsModel(QAbstractListModel):
 	def __init__(self, file: AnimatedActor):
 		super(QAbstractListModel, self).__init__()
 		self.file = file
@@ -22,7 +22,10 @@ class testModel(QAbstractListModel):
 			return f'{row}-{self.file.spritesheets[row]}'
 		if role == Qt.DecorationRole:
 			path = str(file.path.parent.joinpath(Path(self.file.spritesheets[row])))
-			pixmap = QPixmap(path)
+			pixmap = QPixmap()
+			if not pixmap.load(path):  # creates black pixmap if no image file
+				pixmap = QPixmap(64, 64)
+				pixmap.fill(Qt.black)
 			return pixmap.scaledToWidth(64)
 
 
@@ -36,10 +39,12 @@ class SpritesheetsList(QWidget):
 		main_lay.setContentsMargins(0, 0, 0, 0)
 		main_lay.addWidget(QLabel('Spritesheet list'))
 		#
-		list_view = QListView()
-		self.spritesheet_model = testModel(self.file)
-		list_view.setModel(self.spritesheet_model)
-		main_lay.addWidget(list_view)
+		self.list_view = QListView()
+		spritesheet_model = SpritesheetsModel(self.file)
+		self.list_view.setModel(spritesheet_model)
+		self.list_view.selectionModel().selectionChanged.connect(
+			self.selection_changed)
+		main_lay.addWidget(self.list_view)
 		#
 		action_layout = QGridLayout()
 		#
@@ -49,15 +54,17 @@ class SpritesheetsList(QWidget):
 		save_btn = QPushButton('Save')
 		save_btn.clicked.connect(self.on_save)
 		#
+		remove_unused = QPushButton('Remove unused')
+		remove_unused.clicked.connect(self.on_remove_unused)
+		#
+		self.replace_btn = QPushButton('Replace')
+		self.replace_btn.setDisabled(True)
+		self.replace_btn.clicked.connect(self.on_replace)
+		#
 		action_layout.addWidget(add_btn, 0, 0)
-		action_layout.addWidget(QPushButton('Replace'), 0, 1)
-		action_layout.addWidget(QPushButton('Select all'), 1, 0)
-		action_layout.addWidget(QPushButton('Select none'), 1, 1)
-		action_layout.addWidget(QPushButton('Remove unused'), 2, 0)
-		action_layout.addWidget(save_btn, 2,1)
-		action_layout.setColumnStretch(0, 1)
-		action_layout.setColumnStretch(1, 1)
-		action_layout.setRowStretch(1, 2)
+		action_layout.addWidget(self.replace_btn, 0, 1)
+		action_layout.addWidget(remove_unused, 1, 0)
+		action_layout.addWidget(save_btn, 1, 1)
 		main_lay.addLayout(action_layout)
 
 	def add_clicked(self):
@@ -65,15 +72,33 @@ class SpritesheetsList(QWidget):
 			QFileDialog.getOpenFileName(
 				self, 'Open a file', str(self.file.path.parent),
 				'Png files (*.png)')[0])
-		rel_path = '/'.join(path.parts[len(self.file.path.parent.parts):])
-		self.file.add_spritesheet(rel_path)
-		self.spritesheet_model.layoutChanged.emit()
+		if path.is_file():
+			rel_path = '/'.join(path.parts[len(self.file.path.parent.parts):])
+			self.file.add_spritesheet(rel_path)
+			self.list_view.model().layoutChanged.emit()
 
 	def on_save(self):
 		self.file.save_file(self.file.path)
 
-	def on_reload(self):
-		self.spritesheet_model.layoutChanged.emit()
+	def on_remove_unused(self):
+		self.file.remove_unused_spritesheets()
+		self.list_view.model().layoutChanged.emit()
+
+	def on_replace(self):
+		path = Path(
+			QFileDialog.getOpenFileName(
+				self, 'Open a file', str(self.file.path.parent),
+				'Png files (*.png)')[0])
+		if path.is_file():
+			rel_path = '/'.join(path.parts[len(self.file.path.parent.parts):])
+			selected_index = self.list_view.selectedIndexes()[0].row()
+			self.file.replace_spritesheet(selected_index, rel_path)
+
+	def selection_changed(self):
+		if len(self.list_view.selectedIndexes()) > 0:
+			self.replace_btn.setDisabled(False)
+		else:
+			self.replace_btn.setDisabled(True)
 
 class AnimationListWidget(QWidget):
 	def __init__(self):
