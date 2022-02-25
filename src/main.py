@@ -100,22 +100,63 @@ class SpritesheetsList(QWidget):
 		else:
 			self.replace_btn.setDisabled(True)
 
+
+class AnimationModel(QAbstractListModel):
+	def __init__(self, file: AnimatedActor):
+		super(QAbstractListModel, self).__init__()
+		self.animation_list = file.get_animation_list()
+		self.file = file
+
+	def rowCount(self, parent=None, *args, **kwargs):
+		return len(self.animation_list)
+
+	def data(self, QModelIndex, role=None):
+		row = QModelIndex.row()
+		if role == Qt.DisplayRole:
+			return self.animation_list[row]
+		if role == Qt.FontRole:
+			if self.animation_list[row] == self.file.default_animation:
+				font = QFont()
+				font.setBold(13)
+				return QVariant(font)
+
+
 class AnimationListWidget(QWidget):
-	def __init__(self):
+	def __init__(self, file):
 		super(QWidget, self).__init__()
+		self.file: AnimatedActor = file
+		#
+		self.list_view = QListView()
+		animation_model = AnimationModel(file)
+		self.list_view.setModel(animation_model)
+		#
+		set_default_btn = QPushButton('Default')
+		set_default_btn.clicked.connect(self.on_set_default)
+		#
+		add_btn = QPushButton('Add')
+		add_btn.clicked.connect(self.on_add)
+		#
 		main_lay = QVBoxLayout(self)
 		main_lay.setSpacing(0)
 		main_lay.setContentsMargins(0, 0, 0, 0)
 		main_lay.addWidget(QPushButton('Animation List'))
-		main_lay.addWidget(QListView())
+		main_lay.addWidget(self.list_view)
 		action_layout = QGridLayout()
-		action_layout.addWidget(QPushButton('Add'), 0, 0)
+		action_layout.addWidget(add_btn, 0, 0)
 		action_layout.addWidget(QPushButton('Duplicate'), 0, 1)
 		action_layout.addWidget(QPushButton('Merge'), 1, 0)
 		action_layout.addWidget(QPushButton('Remove'), 1, 1)
-		action_layout.addWidget(QPushButton('Default'), 2, 0, 1, 2)
+		action_layout.addWidget(set_default_btn, 2, 0, 1, 2)
 		main_lay.addLayout(action_layout)
 
+	def on_set_default(self):
+		sel_index = self.list_view.selectedIndexes()
+		if len(sel_index) > 0:
+			self.file.set_default_animation(sel_index[0].data())
+		self.list_view.model().layoutChanged.emit()
+
+	def on_add(self):
+		pass
 
 class MyTimeline(QWidget):
 	def __init__(self):
@@ -180,7 +221,7 @@ def window():
 	widget = QWidget()
 	lay = QVBoxLayout(widget)
 	lay.addWidget(SpritesheetsList(file))
-	lay.addWidget(AnimationListWidget())
+	lay.addWidget(AnimationListWidget(file))
 	widget.show()
 	sys.exit(app.exec_())
 
