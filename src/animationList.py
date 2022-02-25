@@ -1,4 +1,4 @@
-from PyQt5.QtCore import QAbstractListModel,QVariant
+from PyQt5.QtCore import QAbstractListModel, QVariant
 from PyQt5.QtWidgets import QWidget, QListView, QPushButton, QVBoxLayout, QGridLayout
 from PyQt5.Qt import Qt
 from PyQt5.QtGui import QFont
@@ -41,7 +41,6 @@ class AnimationModel(QAbstractListModel):
 			else:
 				self.file.add_animation(value)
 			self.update_model()
-			self.file.save_file()
 			return True
 
 	def update_model(self):
@@ -69,6 +68,10 @@ class AnimationListWidget(QWidget):
 		self.duplicate_btn.setDisabled(True)
 		self.duplicate_btn.clicked.connect(self.on_duplicate)
 		#
+		self.remove_btn = QPushButton('Remove')
+		self.remove_btn.setDisabled(True)
+		self.remove_btn.clicked.connect(self.on_remove)
+		#
 		main_lay = QVBoxLayout(self)
 		main_lay.setSpacing(0)
 		main_lay.setContentsMargins(0, 0, 0, 0)
@@ -77,8 +80,8 @@ class AnimationListWidget(QWidget):
 		action_layout = QGridLayout()
 		action_layout.addWidget(add_btn, 0, 0)
 		action_layout.addWidget(self.duplicate_btn, 0, 1)
-		action_layout.addWidget(QPushButton('Merge'), 1, 0)
-		action_layout.addWidget(QPushButton('Remove'), 1, 1)
+		action_layout.addWidget(QPushButton('*Merge*'), 1, 0)
+		action_layout.addWidget(self.remove_btn, 1, 1)
 		action_layout.addWidget(set_default_btn, 2, 0, 1, 2)
 		main_lay.addLayout(action_layout)
 
@@ -93,17 +96,34 @@ class AnimationListWidget(QWidget):
 		self.list_view.model().layoutChanged.emit()
 		row = self.list_view.model().rowCount() - 1
 		self.list_view.edit(self.list_view.model().index(row))
+		# sets selection to edited added anim
+		self.list_view.setCurrentIndex(self.list_view.model().index(row))
 
 	def selection_changed(self):
 		if len(self.list_view.selectedIndexes()) > 0:
 			self.duplicate_btn.setDisabled(False)
-		else:
-			self.duplicate_btn.setDisabled(True)
+			self.remove_btn.setDisabled(False)
+		print(len(self.list_view.selectedIndexes()))
 
 	def on_duplicate(self):
-		duplicate_anim = self.list_view.selectedIndexes()[0]
-		print(self.file.duplicate_animation(duplicate_anim.data()))
+		"""
+		Duplicates selected animation in view.
+		Populates in memory Animated actor
+		"""
+		selected_animation = self.list_view.selectedIndexes()[0]
+		# if not failed duplication
+		if self.file.duplicate_animation(selected_animation.data()):
+			self.list_view.model().update_model()
+			self.list_view.model().layoutChanged.emit()
+			row = self.list_view.model().rowCount() - 1
+			# focus to edit duplicated
+			self.list_view.edit(self.list_view.model().index(row))
+			# set selection to new item
+			self.list_view.setCurrentIndex(self.list_view.model().index(row))
+
+	def on_remove(self):
+		selected_animation: str = self.list_view.selectedIndexes()[0].data()
+		self.file.remove_animation(selected_animation)
 		self.list_view.model().update_model()
 		self.list_view.model().layoutChanged.emit()
-		row = self.list_view.model().rowCount() - 1
-		self.list_view.edit(self.list_view.model().index(row))
+		self.remove_btn.setDisabled(True)
