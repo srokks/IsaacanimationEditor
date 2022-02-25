@@ -156,7 +156,10 @@ class AnimationListWidget(QWidget):
 		self.list_view.model().layoutChanged.emit()
 
 	def on_add(self):
-		pass
+		self.list_view.model().anim_list.append('New animation')
+		self.list_view.model().layoutChanged.emit()
+		row = self.list_view.model().rowCount()-1
+		self.list_view.edit(self.list_view.model().index(row))
 
 class MyTimeline(QWidget):
 	def __init__(self):
