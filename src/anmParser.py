@@ -349,6 +349,9 @@ class AnimatedActor:
 	def replace_spritesheet(self, spritesheet_id, path: str):
 		self.spritesheets[spritesheet_id] = path
 
+	def set_default_animation(self,name):
+		if name in self.get_animation_list():
+			self.default_animation = name
 
 if __name__ == '__main__':
 	anm_path_ = '/Users/srokks/PycharmProjects/animationEditor/resources/static' \
