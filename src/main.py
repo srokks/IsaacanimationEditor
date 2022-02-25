@@ -7,6 +7,9 @@ from PyQt5.QtCore import *
 from anmParser import AnimatedActor
 from pathlib import Path
 
+from animationList import AnimationListWidget
+from animationTimeline import AnimationTimeline
+
 
 class SpritesheetsModel(QAbstractListModel):
 	def __init__(self, file: AnimatedActor):
@@ -101,154 +104,17 @@ class SpritesheetsList(QWidget):
 			self.replace_btn.setDisabled(True)
 
 
-class AnimationModel(QAbstractListModel):
-	def __init__(self, file: AnimatedActor):
-		super(QAbstractListModel, self).__init__()
-		self.file = file
-		self.anim_list = file.get_animation_list()
-
-	def rowCount(self, parent=None, *args, **kwargs):
-		return len(self.anim_list)
-
-	def data(self, QModelIndex, role=None):
-		row = QModelIndex.row()
-		if role == Qt.DisplayRole:
-			return self.anim_list[row]
-		if role == Qt.FontRole:
-			if self.anim_list[row] == self.file.default_animation:
-				font = QFont()
-				font.setBold(13)
-				return QVariant(font)
-		if role == Qt.EditRole:
-			return self.anim_list[row]
-
-	def flags(self, index):
-		return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
-
-	def setData(self, index, value, role):
-		if role == Qt.EditRole:
-			# gets animation object from file and change name
-			if value in self.file.get_animation_list():  # change value
-				self.file.get_animation(
-					self.anim_list[index.row()]).name = value
-			else:
-				if value in self.file.get_animation_list():
-					# TODO: throw message box
-					# print('Animation already on list')
-					pass
-				self.file.add_animation(value)
-			self.update_model()
-			self.file.save_file()
-			return True
-
-	def update_model(self):
-		self.anim_list = self.file.get_animation_list()
-
-
-class AnimationListWidget(QWidget):
-	def __init__(self, file):
-		super(QWidget, self).__init__()
-		self.file: AnimatedActor = file
-		#
-		self.list_view = QListView()
-		animation_model = AnimationModel(file)
-		self.list_view.setModel(animation_model)
-		#
-		set_default_btn = QPushButton('Default')
-		set_default_btn.clicked.connect(self.on_set_default)
-		#
-		add_btn = QPushButton('Add')
-		add_btn.clicked.connect(self.on_add)
-		#
-		main_lay = QVBoxLayout(self)
-		main_lay.setSpacing(0)
-		main_lay.setContentsMargins(0, 0, 0, 0)
-		main_lay.addWidget(QPushButton('Animation List'))
-		main_lay.addWidget(self.list_view)
-		action_layout = QGridLayout()
-		action_layout.addWidget(add_btn, 0, 0)
-		action_layout.addWidget(QPushButton('Duplicate'), 0, 1)
-		action_layout.addWidget(QPushButton('Merge'), 1, 0)
-		action_layout.addWidget(QPushButton('Remove'), 1, 1)
-		action_layout.addWidget(set_default_btn, 2, 0, 1, 2)
-		main_lay.addLayout(action_layout)
-
-	def on_set_default(self):
-		sel_index = self.list_view.selectedIndexes()
-		if len(sel_index) > 0:
-			self.file.set_default_animation(sel_index[0].data())
-		self.list_view.model().layoutChanged.emit()
-
-	def on_add(self):
-		self.list_view.model().anim_list.append('New animation')
-		self.list_view.model().layoutChanged.emit()
-		row = self.list_view.model().rowCount()-1
-		self.list_view.edit(self.list_view.model().index(row))
-
-class MyTimeline(QWidget):
-	def __init__(self):
-		super(QWidget, self).__init__()
-		self.setWindowTitle("AnimationLine")
-		self.setMouseTracking(True)
-		self.current_frame = 0
-		lay = QHBoxLayout()
-		lay.setAlignment(Qt.AlignLeft)
-
-	def paintEvent(self, event):
-		qp = QPainter()
-		qp.begin(self)
-		qp.setPen(QColor(187, 187, 187))
-		qp.setFont(QFont('Times', 8))
-		qp.setRenderHint(QPainter.Antialiasing)
-
-		# Draw dash lines
-		point = 0
-		# qp.drawLine(15,0,15,10)
-		# qp.drawLine(15,20,15,30)
-		# qp.drawLine(30, 0, 30, 10)
-		# qp.drawLine(30, 20, 30, 30)
-		# qp.drawRect(0,0,15,30)
-		qp.fillRect(0, 0, self.width(), 30, Qt.gray)
-		#
-		qp.setPen(Qt.black)
-		while point <= self.width():
-			if (int(point / 10) % 5 == 0) or point == 0:
-				qp.fillRect(point, 0, 10, 30, Qt.darkGray)
-				qp.drawText(point, 0, 10, 30, Qt.AlignCenter, str(int(point / 10)))
-			qp.drawLine(point, 0, point, 10)
-			qp.drawLine(point, 20, point, 30)
-			point += 10
-		qp.drawLine(0, 30, self.width(), 30)
-		#
-		path = QPainterPath(QPoint(1 + (10 * self.current_frame), 1))
-		path.lineTo(QPoint(9 + (10 * self.current_frame), 1))
-		path.lineTo(QPoint(9 + (10 * self.current_frame), 10))
-		path.lineTo(QPoint(5 + (10 * self.current_frame), 30))
-		path.lineTo(QPoint(1 + (10 * self.current_frame), 10))
-		line = QLine(
-			QPoint(5 + (10 * self.current_frame), 0),
-			QPoint(5 + (10 * self.current_frame), self.height()))
-		qp.setPen(Qt.darkCyan)
-		qp.setBrush(QBrush(Qt.darkCyan))
-		# qp.fillRect(1,1,8,15,Qt.darkCyan)
-		# qp.fillPath(path,Qt.darkCyan)
-		qp.drawPath(path)
-		qp.drawLine(line)
-
-	def mousePressEvent(self, e):
-		if e.button() == Qt.LeftButton:
-			self.current_frame = math.floor(e.pos().x() / 10)
-			self.update()
-
-
 def window():
 	app = QApplication(sys.argv)
 	file: AnimatedActor = AnimatedActor(
 		'/Users/srokks/PycharmProjects/animationEditor/resources/static/blank_my.anm2')
 	widget = QWidget()
-	lay = QVBoxLayout(widget)
-	lay.addWidget(SpritesheetsList(file))
-	lay.addWidget(AnimationListWidget(file))
+	main_lay = QHBoxLayout(widget)
+	list_lay = QVBoxLayout()
+	list_lay.addWidget(SpritesheetsList(file))
+	list_lay.addWidget(AnimationListWidget(file))
+	main_lay.addLayout(list_lay)
+	main_lay.addWidget(AnimationTimeline())
 	widget.show()
 	sys.exit(app.exec_())
 
