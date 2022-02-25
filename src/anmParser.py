@@ -2,6 +2,7 @@ from lxml import etree, objectify
 import dateutil.parser as parser
 from datetime import datetime as dt
 from pathlib import Path
+import copy
 
 
 class Frame:
@@ -214,7 +215,9 @@ class AnimatedActor:
 			for animation in animations:
 				self.animations.append(Animation(animation_tree=animation))
 
-	def save_file(self, path):
+	def save_file(self, path=None):
+		if path is None:
+			path = self.path
 		root = etree.Element("AnimatedActor")
 		info = etree.SubElement(
 			root, 'Info', CreatedBy=self.created_by,
@@ -311,7 +314,7 @@ class AnimatedActor:
 		for layer in self.layers.values():
 			self.animations[-1].layer_animations.append(
 				LayerAnimation(
-					layer_id=layer.layer_id))
+					layer_id=layer.id))
 		if len(self.animations) == 1:
 			self.default_animation = name
 
@@ -349,9 +352,30 @@ class AnimatedActor:
 	def replace_spritesheet(self, spritesheet_id, path: str):
 		self.spritesheets[spritesheet_id] = path
 
-	def set_default_animation(self,name):
+	def set_default_animation(self, name):
 		if name in self.get_animation_list():
 			self.default_animation = name
+
+	def get_animation(self, name):
+		for anim in self.animations:
+			if anim.name == name:
+				return anim
+		else:
+			return False
+
+	def duplicate_animation(self, name):
+		if name in self.get_animation_list():
+			temp_anim = copy.copy(self.get_animation(name))
+			self.animations.append(temp_anim)
+			self.animations[-1].name = self.animations[-1].name + ' copy'
+			return True
+		else:
+			return False
+
+	def remove_animation(self, name):
+		index = self.animations.index(self.get_animation(name))
+		self.animations.pop(index)
+
 
 if __name__ == '__main__':
 	anm_path_ = '/Users/srokks/PycharmProjects/animationEditor/resources/static' \
@@ -360,7 +384,11 @@ if __name__ == '__main__':
 	       '.anm2'
 	file = AnimatedActor(save)
 	file.created_by = 'Srokks'
-	file.save_file(save)
+	file.duplicate_animation('Second')
+	print(file.get_animation_list())
+	file.remove_animation('Second copy')
+	print(file.get_animation_list())
+	file.save_file()
 '''
 animation:path
 '''
