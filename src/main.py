@@ -104,21 +104,45 @@ class SpritesheetsList(QWidget):
 class AnimationModel(QAbstractListModel):
 	def __init__(self, file: AnimatedActor):
 		super(QAbstractListModel, self).__init__()
-		self.animation_list = file.get_animation_list()
 		self.file = file
+		self.anim_list = file.get_animation_list()
 
 	def rowCount(self, parent=None, *args, **kwargs):
-		return len(self.animation_list)
+		return len(self.anim_list)
 
 	def data(self, QModelIndex, role=None):
 		row = QModelIndex.row()
 		if role == Qt.DisplayRole:
-			return self.animation_list[row]
+			return self.anim_list[row]
 		if role == Qt.FontRole:
-			if self.animation_list[row] == self.file.default_animation:
+			if self.anim_list[row] == self.file.default_animation:
 				font = QFont()
 				font.setBold(13)
 				return QVariant(font)
+		if role == Qt.EditRole:
+			return self.anim_list[row]
+
+	def flags(self, index):
+		return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
+
+	def setData(self, index, value, role):
+		if role == Qt.EditRole:
+			# gets animation object from file and change name
+			if value in self.file.get_animation_list():  # change value
+				self.file.get_animation(
+					self.anim_list[index.row()]).name = value
+			else:
+				if value in self.file.get_animation_list():
+					# TODO: throw message box
+					# print('Animation already on list')
+					pass
+				self.file.add_animation(value)
+			self.update_model()
+			self.file.save_file()
+			return True
+
+	def update_model(self):
+		self.anim_list = self.file.get_animation_list()
 
 
 class AnimationListWidget(QWidget):
