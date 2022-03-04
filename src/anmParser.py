@@ -96,7 +96,7 @@ class LayerAnimation:
 			self.frames = []
 		else:
 			self.layer_id = int(layer_tree.attrib.get('LayerId'))
-			self.visible = bool(layer_tree.attrib.get('Visible'))
+			self.visible = True if layer_tree.attrib.get('Visible') == 'true' else False
 			self.frames = []
 			for frame in layer_tree:
 				self.frames.append(Frame(frame))
