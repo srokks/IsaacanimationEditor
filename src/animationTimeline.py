@@ -4,6 +4,39 @@ from PyQt5.QtCore import Qt, QPoint, QLine, QAbstractTableModel, QSize, pyqtSign
 	pyqtSlot
 import math
 
+visible_image = QImage()
+visible_image.load("../resources/-visibility_90186.png")
+
+class Test2(QWidget):
+	"""
+	Widget with layer buttons, UGLY
+	"""
+	a = pyqtSlot(bool)
+	selected_layer = None
+
+	def __init__(self, animation=None):
+		super(TimelineWi, self).__init__()
+		self.setMaximumHeight(150)
+		main_lay = QVBoxLayout(self)
+		main_lay.setContentsMargins(1, 1, 1, 1)
+		main_lay.setSpacing(0)
+		btns = []
+		for layer in animation.get_layer_list():
+			btns.append(LayerButton(layer))
+			btns[-1].layer_visible.connect(self.on_change_visibility)
+			btns[-1].select.connect(self.on_selection_change)
+		for btn in btns:
+			main_lay.addWidget(btn)
+
+	def on_change_visibility(self, btn: LayerButton):
+		print(btn.text)
+		pass
+
+	def on_selection_change(self, btn: LayerButton):
+		if self.selected_layer is not None:
+			self.selected_layer.setEnabled(False)
+		self.selected_layer = btn
+		self.selected_layer.setEnabled(True)
 
 class LayerButton(QWidget):
 	layer_visible = pyqtSignal(object)
