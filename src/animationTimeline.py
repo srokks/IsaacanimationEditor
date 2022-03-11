@@ -1,120 +1,144 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import Qt, QPoint, QLine, QAbstractTableModel, QSize, pyqtSignal, \
-	pyqtSlot
+	pyqtSlot, QAbstractListModel, QModelIndex, QRect
 import math
-
+from anmParser import *
+from spritesheetList import SpritesheetsModel
 visible_image = QImage()
 visible_image.load("../resources/-visibility_90186.png")
 
-class Test2(QWidget):
-	"""
-	Widget with layer buttons, UGLY
-	"""
-	a = pyqtSlot(bool)
-	selected_layer = None
 
-	def __init__(self, animation=None):
-		super(TimelineWi, self).__init__()
-		self.setMaximumHeight(150)
-		main_lay = QVBoxLayout(self)
-		main_lay.setContentsMargins(1, 1, 1, 1)
-		main_lay.setSpacing(0)
-		btns = []
-		for layer in animation.get_layer_list():
-			btns.append(LayerButton(layer))
-			btns[-1].layer_visible.connect(self.on_change_visibility)
-			btns[-1].select.connect(self.on_selection_change)
-		for btn in btns:
-			main_lay.addWidget(btn)
-
-	def on_change_visibility(self, btn: LayerButton):
-		print(btn.text)
-		pass
-
-	def on_selection_change(self, btn: LayerButton):
-		if self.selected_layer is not None:
-			self.selected_layer.setEnabled(False)
-		self.selected_layer = btn
-		self.selected_layer.setEnabled(True)
-
-class LayerButton(QWidget):
-	layer_visible = pyqtSignal(object)
-	select = pyqtSignal(object)
-
-	def __init__(self, layer, parent=None):
-		super(LayerButton, self).__init__(parent)
-		self.setContentsMargins(0, 0, 0, 0)
-		self.setFixedSize(QSize(150, 30))
-		self.clicked = False
-		self.text = layer[1]
-		self.triggered = layer[2]
-
-	def paintEvent(self, e):
-		qp = QPainter()
-		qp.begin(self)
-		qp.setPen(Qt.red)
-		grad = QLinearGradient(0, 0, 0, 15)
-		if self.clicked:
-			grad.setColorAt(0, QColor(204, 83, 62))
-		else:
-			grad.setColorAt(0, QColor(255, 100, 80))
-		grad.setColorAt(1, QColor(255, 99, 71))
-
-		qp.setBrush(grad)
-		rect = QRect(0, 0, self.width(), self.height())
-		qp.drawRoundedRect(rect, 10, 10)
-		#
-		if self.triggered:
-			qp.drawImage(QRect(self.width() - 30, 0, 25, 30), visible_image)
-		else:
-			qp.setPen(Qt.lightGray)
-			vis_rect = QRect(self.width() - 22, 10, 10, 10)
-			qp.drawEllipse(vis_rect)
-		#
-		qp.setPen(Qt.black)
-		qp.drawText(QRect(0, 0, self.width() - 20, 30), Qt.AlignCenter, self.text)
-
-	def mousePressEvent(self, event: QMouseEvent):
-		if event.pos().x() > self.width() - 30:
-			self.triggered = False if self.triggered else True
-			self.layer_visible.emit(self)
-		else:
-			self.select.emit(self)
-		self.repaint()
-
-	def setEnabled(self, a0: bool) -> None:
-		self.clicked = a0
-		self.repaint()
-
-
-class TimelineView(QTableView):
-	def __init__(self, parent):
-		super(QTableView, self).__init__(parent=parent)
-		self.setGridStyle(Qt.DashDotLine)
-
-
-# def paintEvent(self, event):
-# 	pass
-
-
-class TimeLineModel(QAbstractTableModel):
+class AddLayerDialog(QDialog):
 	def __init__(self):
-		super(QAbstractTableModel, self).__init__()
+		super(AddLayerDialog, self).__init__()
 
-	def columnCount(self, parent=None, *args, **kwargs):
-		return 2
+		self.setWindowTitle('Layer properties')
+		main_lay = QGridLayout()
+		main_lay.addWidget(QLabel('Layer name:'),0,0)
+		main_lay.addWidget(QLineEdit(),0,1)
+		main_lay.addWidget(QLabel('Spritesheet:'), 1, 0)
+		combo = QComboBox()
+		mdoel = SpritesheetsModel()
+		# combo.setModel()
+		main_lay.addWidget(QLineEdit(), 1, 1)
+		self.setLayout(main_lay)
 
-	def rowCount(self, parent=None, *args, **kwargs):
-		return 4
 
-	def data(self, QModelIndex, role=None):
-		row, col = QModelIndex.row(), QModelIndex.column()
+class AnimTime(QWidget):
+	def __init__(self, animation=None):
+		super(AnimTime, self).__init__()
+		self.setMaximumHeight(200)
+		main_lay = QVBoxLayout(self)
+		main_lay.setSpacing(0)
+		main_lay.setContentsMargins(0, 0, 0, 0)
+		#
+		layer_list_view = QListView()
+		model = LayerModel(animation)
+		delegate = LayerDelegate()
+		layer_list_view.setItemDelegate(delegate)
+		layer_list_view.setFixedWidth(150)
+		layer_list_view.setModel(model)
+		#
+		add_btn = QPushButton('Add')
+		add_btn.clicked.connect(self.add_btn)
+		#
+		action__lay = QHBoxLayout()
+		action__lay.setContentsMargins(0, 0, 0, 0)
+		action__lay.setSpacing(0)
+		action__lay.addWidget(add_btn)
+		action__lay.addWidget(QPushButton('Remove'))
+		#
+		main_lay.addWidget(layer_list_view)
+		main_lay.addLayout(action__lay)
+
+	def add_btn(self):
+		dialog = AddLayerDialog()
+		a = dialog.exec_()
+		print(a)
+
+
+class LayerModel(QAbstractListModel):
+
+	def __init__(self, animation: Animation):
+		super(QAbstractListModel, self).__init__()
+		self.animation = animation
+		self.layer_list = animation.get_layer_list()
+
+	def flags(self, index: QModelIndex) -> Qt.ItemFlag:
+		return Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable
+
+	def rowCount(self, parent: QModelIndex = None) -> int:
+		return len(self.layer_list)
+
+	def data(self, index: QModelIndex, role: int = None):
+		row = index.row()
 		if role == Qt.DisplayRole:
-			return '*'
-		if role == Qt.SizeHintRole:
-			print('s')
-			return QSize(4, 4)
+			return self.layer_list[row][1]
+		elif role == Qt.SizeHintRole:
+			return QSize(120, 30)
+		elif role == Qt.UserRole:
+			vis = True
+			if index.data() != 'Root':
+				vis = self.layer_list[row][2]
+			return vis
+
+	def setData(self, index: QModelIndex, value, role: int = None) -> bool:
+		if role == Qt.UserRole:
+			self.animation.change_visibility(index.row() - 1)
+			self.update_model()
+		return False
+
+	def update_model(self):
+		self.layer_list = self.animation.get_layer_list()
+
+
+class LayerDelegate(QItemDelegate):
+	def __init__(self):
+		super(QItemDelegate, self).__init__()
+
+	def createEditor(self, parent, option, index):
+		return None
+
+	def editorEvent(self, event, model, option, index: QModelIndex):
+		if event.type() == 3:
+			if event.pos().x() > 120:
+				model.setData(index, None, Qt.UserRole)
+				return True
+		return False
+
+	def paint(self, painter, option, index):
+		painter.save()
+		# set background color
+		painter.setPen(QPen(Qt.NoPen))  # sets not border
+		grad = QLinearGradient(
+			option.rect.x(), option.rect.y(), option.rect.x(), option.rect.y() + 15)
+		if option.state & QStyle.State_Selected:  # sets color if selected
+			grad.setColorAt(0, QColor(128, 49, 36))
+		else:  # sets color if unselected
+			grad.setColorAt(0, QColor(255, 164, 148))
+		grad.setColorAt(1, QColor(255, 99, 71))  # main color
+		painter.setBrush(grad)
+		painter.drawRoundedRect(option.rect, 10, 10)
+		#
+		visible = index.data(Qt.UserRole)
+		# Visible layer trigger draw
+		if visible:  # draws eye image as visible layer
+			painter.drawImage(
+				QRect(option.rect.width() - 30, option.rect.y(), 25, 30),
+				visible_image)
+		else:  # draws ellipse as hidden layer
+			painter.setPen(Qt.lightGray)
+			vis_rect = QRect(option.rect.width() - 22, option.rect.y() + 10, 10, 10)
+			painter.drawEllipse(vis_rect)
+		# set text color
+		painter.setPen(QPen(Qt.black))
+		rect = QRect(
+			option.rect.x(), option.rect.y(), option.rect.width() - 30,
+			option.rect.height())
+		text = index.data(Qt.DisplayRole)
+		painter.drawText(option.rect, Qt.AlignCenter, text)
+		painter.restore()
 
 
 class Frame(QPushButton):
@@ -147,9 +171,6 @@ class Frame(QPushButton):
 	def check_clicked(self):
 		self.clicked = True if self.selected_frame == self.name else False
 		self.repaint()
-
-
-# self.clicked = False if self.clicked else True
 
 
 class AnimationTimeline(QWidget):
