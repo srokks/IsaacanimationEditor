@@ -5,6 +5,7 @@ from PyQt5.QtCore import Qt, QPoint, QLine, QAbstractTableModel, QSize, pyqtSign
 import math
 from anmParser import *
 from spritesheetList import SpritesheetsModel
+
 visible_image = QImage()
 visible_image.load("../resources/-visibility_90186.png")
 
@@ -15,8 +16,8 @@ class AddLayerDialog(QDialog):
 
 		self.setWindowTitle('Layer properties')
 		main_lay = QGridLayout()
-		main_lay.addWidget(QLabel('Layer name:'),0,0)
-		main_lay.addWidget(QLineEdit(),0,1)
+		main_lay.addWidget(QLabel('Layer name:'), 0, 0)
+		main_lay.addWidget(QLineEdit(), 0, 1)
 		main_lay.addWidget(QLabel('Spritesheet:'), 1, 0)
 		combo = QComboBox()
 		mdoel = SpritesheetsModel()
@@ -26,8 +27,9 @@ class AddLayerDialog(QDialog):
 
 
 class AnimTime(QWidget):
-	def __init__(self, animation=None):
+	def __init__(self, file: AnimatedActor, animation_name: str):
 		super(AnimTime, self).__init__()
+		self.animation = file.get_animation(animation_name)
 		self.setMaximumHeight(200)
 		main_lay = QVBoxLayout(self)
 		main_lay.setSpacing(0)
