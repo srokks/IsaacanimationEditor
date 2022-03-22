@@ -10,7 +10,7 @@ from anmParser import AnimatedActor
 from pathlib import Path
 
 from animationList import AnimationListWidget
-from animationTimeline import AnimationTimeline
+from animationTimeline import AnimTime
 from spritesheetList import SpritesheetsList
 
 
@@ -33,7 +33,8 @@ def window():
 	#
 	main_lay.addLayout(list_lay)
 	#
-	main_lay.addWidget(TimelineWi(file.get_animation('Second')))
+	animation_name = 'Second'
+	main_lay.addWidget(file, animation_name)
 	#
 	widget.show()
 	sys.exit(app.exec_())
