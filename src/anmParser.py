@@ -101,6 +101,10 @@ class LayerAnimation:
 			for frame in layer_tree:
 				self.frames.append(Frame(frame))
 
+	def __repr__(self):
+		return f'Layer id: {self.layer_id}| Visible: {self.visible}| Frames: ' \
+		       f'{len(self.frames)}'
+
 
 class Animation:
 	"""
@@ -113,13 +117,14 @@ class Animation:
 	root_animation: list
 	layer_animations: list
 
-	def __init__(self, animation_tree: etree = None, name: str = None, ):
+	def __init__(self, parent=None, animation_tree: etree = None, name: str = None, ):
 		if animation_tree is not None:
 			self.name = animation_tree.attrib.get('Name')
 			self.frame_num = animation_tree.attrib.get('FrameNum')
 			self.loop = animation_tree.attrib.get('Loop')
 			self.root_animation = []
 			self.layer_animations = []
+			self.parent = parent
 			for child in animation_tree:
 				# ___
 				if child.tag == 'RootAnimation':
@@ -144,6 +149,18 @@ class Animation:
 			self.frame_num = 1
 			self.loop = False
 
+	def get_layer_list(self):
+		layers = []
+		layers.append((-1,'Root',))
+		for layer in self.layer_animations:
+			layers.append(
+				(layer.layer_id, self.parent.get_layer_name(layer.layer_id),
+				layer.visible))
+		return layers
+
+	def change_visibility(self,layer_id):
+		self.layer_animations[layer_id].visible = False if self.layer_animations[
+			layer_id].visible else True
 
 class Layer:
 	def __init__(
@@ -161,9 +178,10 @@ class Layer:
 			self.id = layer_tree.get('Id')
 			self.spritesheet_id = int(layer_tree.get('SpritesheetId'))
 
-	def __str__(self):
-		return f'Name: {self.name}|layer_id: {self.id}|spritesheet_id:' \
-		       f'{self.spritesheet_id}'
+
+# def __str__(self):
+# 	return f'Name: {self.name}|layer_id: {self.id}|spritesheet_id:' \
+# 	       f'{self.spritesheet_id}'
 
 
 class AnimatedActor:
@@ -213,7 +231,10 @@ class AnimatedActor:
 			# _____ Animations read
 			self.default_animation = animations.attrib.get('DefaultAnimation')
 			for animation in animations:
-				self.animations.append(Animation(animation_tree=animation))
+				self.animations.append(
+					Animation(
+						parent=self,
+						animation_tree=animation))
 
 	def save_file(self, path=None):
 		if path is None:
@@ -376,6 +397,13 @@ class AnimatedActor:
 		index = self.animations.index(self.get_animation(name))
 		self.animations.pop(index)
 
+	def get_layer_name(self, layer_id: int):
+		test_layer = self.layers.get(str(layer_id))
+		if test_layer is not None:
+			return test_layer.name
+		else:
+			return False
+
 
 if __name__ == '__main__':
 	anm_path_ = '/Users/srokks/PycharmProjects/animationEditor/resources/static' \
@@ -384,11 +412,10 @@ if __name__ == '__main__':
 	       '.anm2'
 	file = AnimatedActor(save)
 	file.created_by = 'Srokks'
-	file.duplicate_animation('Second')
-	print(file.get_animation_list())
-	file.remove_animation('Second copy')
-	print(file.get_animation_list())
-	file.save_file()
+	a = file.get_animation('Second')
+	# print(file.get_layer_name(4))
+	print(a.get_layer_list())
+
 '''
 animation:path
 '''
